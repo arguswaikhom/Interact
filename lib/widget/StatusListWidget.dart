@@ -2,16 +2,58 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:interact/page/ImageView.dart';
+import 'package:interact/page/VideoPlay.dart';
 import 'package:interact/resource/AppColor.dart';
 import 'package:interact/resource/AppString.dart';
 import 'package:interact/utils/NotificationUtils.dart';
+import 'package:interact/utils/WhatsAppStatusUtils.dart';
 import 'package:path/path.dart';
 import 'package:share/share.dart';
+import 'package:video_player/video_player.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
-class StatusListWidget extends StatelessWidget {
-  final imageUri;
+class StatusListWidget extends StatefulWidget {
+  final contentUri;
 
-  const StatusListWidget({Key key, @required this.imageUri}) : super(key: key);
+  const StatusListWidget({Key key, this.contentUri}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() {
+    print(contentUri);
+    return _StatusListWidget(
+      contentUri: contentUri,
+    );
+  }
+}
+
+class _StatusListWidget extends State<StatusListWidget> {
+  final contentUri;
+  final isVideoContent;
+
+  var videoThumbnail;
+
+  _StatusListWidget({@required this.contentUri})
+      : isVideoContent = contentUri
+            .toString()
+            .toLowerCase()
+            .endsWith(AppString.formatStatusVideo);
+
+  @override
+  void initState() {
+    super.initState();
+
+    /// If the content is video; get the thumbnail of the video to display
+    if (isVideoContent) {
+      getVideoThumbnail(
+          contentUri,
+          (imagePath) => {
+                setState(() {
+                  videoThumbnail = imagePath;
+                })
+              });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,30 +61,51 @@ class StatusListWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(16.0),
       child: Stack(
         children: [
-          /// Status Image view
-          Hero(
-            tag: imageUri,
-            child: Image.file(
-              File(imageUri),
-              fit: BoxFit.fitWidth,
+          /// Status view
+          _getStatusView(),
+
+          /// Ripples effect on click
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                splashColor: AppColor.primary,
+                onTap: () {
+                  if (isVideoContent) {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) =>
+                            VideoPlay(videoPath: contentUri)));
+                  } else {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) =>
+                            ImageView(imagePath: contentUri)));
+                  }
+                },
+              ),
             ),
           ),
 
           /// Option menu
           _getOptionMenu(context),
-
-          /// Ripples effect on click
-          /*Positioned.fill(
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                splashColor: AppColor.primary,
-                onTap: () {},
-              ),
-            ),
-          ),*/
         ],
       ),
+    );
+  }
+
+  _getStatusView() {
+    return Hero(
+      tag: contentUri,
+      child: isVideoContent
+          ? videoThumbnail == null
+              ? Container()
+              : Image.file(
+                  File(videoThumbnail),
+                  fit: BoxFit.fitWidth,
+                )
+          : Image.file(
+              File(contentUri),
+              fit: BoxFit.fitWidth,
+            ),
     );
   }
 
@@ -95,7 +158,7 @@ class StatusListWidget extends StatelessWidget {
 
   /// Share the current image to other app
   _onClickShareStatus() {
-    Share.shareFiles([imageUri]);
+    Share.shareFiles([contentUri]);
   }
 
   /// Save the current image to user device
@@ -112,9 +175,9 @@ class StatusListWidget extends StatelessWidget {
 
   /// Save the current image to the user device
   _saveStatus(context) async {
-    File imageToBeSave = File(imageUri);
-    final File newImage = await imageToBeSave
-        .copy('${AppString.appDirectory}/${basename(imageToBeSave.path)}');
+    File fileToBeSave = File(contentUri);
+    final File newImage = await fileToBeSave
+        .copy('${AppString.appDirectory}/${basename(fileToBeSave.path)}');
     MessageUtils(context).showLToast('Image saved to ${newImage.path}');
   }
 }

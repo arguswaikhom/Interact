@@ -90,14 +90,14 @@ class _StatusListPageState extends State<StatusListPage> {
     }
 
     // Get all the status from the WhatsApp status folder
-    var imageList = _photoDir
+    var contentList = _photoDir
         .listSync()
         .map((item) => item.path)
-        .where((item) => item.endsWith(".jpg"))
+        .where((item) => item.endsWith(".jpg") || item.endsWith(".mp4"))
         .toList(growable: false);
 
     /// If there is no status in the folder; display "No status found" message
-    if (imageList.length == 0) {
+    if (contentList.length == 0) {
       return Center(
         child: Text(
           "Sorry, No Images Where Found.",
@@ -112,10 +112,10 @@ class _StatusListPageState extends State<StatusListPage> {
         physics: BouncingScrollPhysics(),
         padding: const EdgeInsets.all(AppDimension.primary),
         crossAxisCount: 4,
-        itemCount: imageList.length,
+        itemCount: contentList.length,
         itemBuilder: (context, index) {
           return StatusListWidget(
-            imageUri: imageList[index],
+            contentUri: contentList[index],
           );
         },
         staggeredTileBuilder: (i) => StaggeredTile.fit(2),

@@ -5,4 +5,7 @@ class AppString {
       "/storage/emulated/0/WhatsApp/Media/.Statuses";
   static const String appDirectory =
       "/storage/emulated/0/Interact/Media/Status";
+
+  static const String formatStatusVideo = '.mp4';
+  static const String formatStatusImage = '.jpg';
 }
