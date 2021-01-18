@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:interact/model/WhatsAppStatus.dart';
 import 'package:interact/page/ImageView.dart';
 import 'package:interact/page/VideoPlay.dart';
 import 'package:interact/resource/AppColor.dart';
@@ -10,50 +11,10 @@ import 'package:interact/utils/NotificationUtils.dart';
 import 'package:interact/utils/WhatsAppStatusUtils.dart';
 import 'package:path/path.dart';
 import 'package:share/share.dart';
-import 'package:video_player/video_player.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 
-class StatusListWidget extends StatefulWidget {
-  final contentUri;
-
-  const StatusListWidget({Key key, this.contentUri}) : super(key: key);
-
-  @override
-  State<StatefulWidget> createState() {
-    print(contentUri);
-    return _StatusListWidget(
-      contentUri: contentUri,
-    );
-  }
-}
-
-class _StatusListWidget extends State<StatusListWidget> {
-  final contentUri;
-  final isVideoContent;
-
-  var videoThumbnail;
-
-  _StatusListWidget({@required this.contentUri})
-      : isVideoContent = contentUri
-            .toString()
-            .toLowerCase()
-            .endsWith(AppString.formatStatusVideo);
-
-  @override
-  void initState() {
-    super.initState();
-
-    /// If the content is video; get the thumbnail of the video to display
-    if (isVideoContent) {
-      getVideoThumbnail(
-          contentUri,
-          (imagePath) => {
-                setState(() {
-                  videoThumbnail = imagePath;
-                })
-              });
-    }
-  }
+class StatusWidget extends StatelessWidget {
+  final WhatsAppStatus status;
+  const StatusWidget({Key key, @required this.status}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -71,14 +32,14 @@ class _StatusListWidget extends State<StatusListWidget> {
               child: InkWell(
                 splashColor: AppColor.primary,
                 onTap: () {
-                  if (isVideoContent) {
+                  if (isContentVideo(status.contentUri)) {
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) =>
-                            VideoPlay(videoPath: contentUri)));
+                            VideoPlay(videoPath: status.contentUri)));
                   } else {
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) =>
-                            ImageView(imagePath: contentUri)));
+                            ImageView(imagePath: status.contentUri)));
                   }
                 },
               ),
@@ -94,18 +55,11 @@ class _StatusListWidget extends State<StatusListWidget> {
 
   _getStatusView() {
     return Hero(
-      tag: contentUri,
-      child: isVideoContent
-          ? videoThumbnail == null
-              ? Container()
-              : Image.file(
-                  File(videoThumbnail),
-                  fit: BoxFit.fitWidth,
-                )
-          : Image.file(
-              File(contentUri),
-              fit: BoxFit.fitWidth,
-            ),
+      tag: status,
+      child: Image.file(
+        File(status.thumbnailUri),
+        fit: BoxFit.contain,
+      ),
     );
   }
 
@@ -158,7 +112,7 @@ class _StatusListWidget extends State<StatusListWidget> {
 
   /// Share the current image to other app
   _onClickShareStatus() {
-    Share.shareFiles([contentUri]);
+    Share.shareFiles([status.contentUri]);
   }
 
   /// Save the current image to user device
@@ -175,7 +129,7 @@ class _StatusListWidget extends State<StatusListWidget> {
 
   /// Save the current image to the user device
   _saveStatus(context) async {
-    File fileToBeSave = File(contentUri);
+    File fileToBeSave = File(status.contentUri);
     final File newImage = await fileToBeSave
         .copy('${AppString.appDirectory}/${basename(fileToBeSave.path)}');
     MessageUtils(context).showLToast('Image saved to ${newImage.path}');

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:interact/page/StatusListPage.dart';
 import 'package:interact/resource/AppColor.dart';
 
-import 'page/StatusListPage.dart';
 import 'resource/AppString.dart';
 
 void main() {
