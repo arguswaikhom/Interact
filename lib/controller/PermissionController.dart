@@ -3,7 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 class PermissionController {
   /// Method to request storage permission
   Future<bool> requestStoragePermission() async {
-    /// If the storage permission is already granted; return true otherwire ask for permission
+    /// If the storage permission is already granted; return true otherwise ask for permission
     if (await Permission.storage.isGranted) {
       return true;
     } else {

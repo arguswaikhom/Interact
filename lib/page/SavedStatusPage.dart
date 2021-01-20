@@ -10,72 +10,28 @@ import 'package:interact/resource/AppString.dart';
 import 'package:interact/utils/WhatsAppStatusUtils.dart';
 import 'package:interact/widget/StatusWidget.dart';
 
-class StatusListPage extends StatefulWidget {
+class SaveStatusPage extends StatefulWidget {
+  SaveStatusPage({Key key}) : super(key: key);
+
   @override
-  _StatusListPageState createState() => _StatusListPageState();
+  _SaveStatusPageState createState() => _SaveStatusPageState();
 }
 
-class _StatusListPageState extends State<StatusListPage> {
-  var _selectedChip = AppString.filterWhatsApp;
+class _SaveStatusPageState extends State<SaveStatusPage> {
+  final Directory _photoDir = Directory(AppString.savedStatusDirectory);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: 48,
-          child: _getChoiceChips(),
-        ),
-        Expanded(
-          child: _getStatusListBody(),
-        ),
-      ],
-    );
-  }
-
-  _getChoiceChips() {
-    return ListView(
-      scrollDirection: Axis.horizontal,
-      children: [
-        _getChoiceChip(AppString.filterWhatsApp),
-        _getChoiceChip(AppString.filterWhatsAppBusiness),
-        _getChoiceChip(AppString.filterWhatsAppDual),
-        _getChoiceChip(AppString.filterGBWhatsApp),
-      ],
-    );
-  }
-
-  _getChoiceChip(String label) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 4.0),
-      child: ChoiceChip(
-        backgroundColor: AppColor.dark2,
-        // shadowColor: Colors.purple,
-        labelStyle: TextStyle(color: Colors.white),
-        selectedColor: AppColor.skyBlue,
-        label: Text(label),
-        selected: _selectedChip == label,
-        onSelected: (bool selected) {
-          /// If the user click the same chip which was already selected; do nothing
-          if (label == _selectedChip) return;
-          setState(() {
-            _selectedChip = selected ? label : null;
-          });
-        },
-      ),
-    );
-  }
-
-  _getStatusListBody() {
     return FutureBuilder(
       future: PermissionController().requestStoragePermission(),
-      builder: (context, snapsort) {
-        if (snapsort.connectionState == ConnectionState.done) {
-          if (snapsort.hasData) {
-            if (snapsort.data) {
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasData) {
+            if (snapshot.data) {
+              /// Storage permission granted; show saved status
               return _getStoryList();
             } else {
+              /// Storage permission not granted
               return Center(
                 child: Text(
                   'App required storage permission!!',
@@ -84,9 +40,11 @@ class _StatusListPageState extends State<StatusListPage> {
               );
             }
           } else {
+            /// Show a container while displaying the permission request dialog
             return Container();
           }
         } else {
+          /// Show progress while checking for the permission
           return Center(
             child: CircularProgressIndicator(),
           );
@@ -96,14 +54,12 @@ class _StatusListPageState extends State<StatusListPage> {
   }
 
   _getStoryList() {
-    final Directory _photoDir = Directory(getStatusPath(_selectedChip));
-
-    /// Check whether the WhatsApp status folder is present or not in the user device
+    /// Check whether the saved status folder is present or not in the user device
     if (!Directory("${_photoDir.path}").existsSync()) {
-      /// WhatsApp status folder is not present
+      /// Saved status folder is not present
       return Center(
         child: Text(
-          "WhatsApp images should appear here",
+          "Saved status should appear here",
           style: TextStyle(fontSize: 18.0, color: AppColor.grey5),
         ),
       );
@@ -114,17 +70,20 @@ class _StatusListPageState extends State<StatusListPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           if (snapshot.hasData && snapshot.data.length > 0) {
+            /// Display the saved status in a staggered grid list
             return _getStaggeredList(snapshot.data);
           } else {
-            /// If there is no status in the folder; display "No status found" message
+            /// No saved status found in the directory
             return Center(
               child: Text(
-                "Sorry, No Images Where Found.",
+                "No saved status where found.",
                 style: TextStyle(fontSize: 18.0, color: AppColor.grey5),
               ),
             );
           }
         }
+
+        /// Display a progress indicator while loading the saves status
         return Center(
           child: CircularProgressIndicator(),
         );
@@ -133,8 +92,8 @@ class _StatusListPageState extends State<StatusListPage> {
   }
 
   _getStatusList() async {
-    final Directory _photoDir = Directory(getStatusPath(_selectedChip));
-    var _contentList = _photoDir
+    /// Fetch all the .jpg and .mp4 files from the saved status directory
+    var contentList = _photoDir
         .listSync()
         .map((item) => item.path)
         .where((item) =>
@@ -142,12 +101,14 @@ class _StatusListPageState extends State<StatusListPage> {
             item.endsWith(AppString.formatStatusVideo))
         .toList(growable: false);
 
-    if (_contentList.length == 0) return [];
+    if (contentList.length == 0) return [];
 
+    /// Create a list of [WhatsAppStatus] objects from the [contentList]
     List<WhatsAppStatus> statusList = [];
-    for (int i = 0; i < _contentList.length; i++) {
-      String uri = _contentList[i];
+    for (int i = 0; i < contentList.length; i++) {
+      String uri = contentList[i];
       if (isContentVideo(uri)) {
+        /// Generate thumbnail for all the videos
         String thumbnail = await getVideoThumbnail(uri);
         statusList
             .add(WhatsAppStatus(contentUri: uri, thumbnailUri: thumbnail));
@@ -168,7 +129,12 @@ class _StatusListPageState extends State<StatusListPage> {
         itemCount: item.length,
         itemBuilder: (context, index) {
           return StatusWidget(
+            enableSave: false,
+            enableDelete: true,
             status: item[index],
+            onDelete: () {
+              setState(() {});
+            },
           );
         },
         staggeredTileBuilder: (i) => StaggeredTile.fit(2),

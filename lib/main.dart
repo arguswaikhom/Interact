@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:interact/page/StatusListPage.dart';
+import 'package:interact/page/HomePage.dart';
 import 'package:interact/resource/AppColor.dart';
 
 import 'resource/AppString.dart';
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         primaryColor: AppColor.primary,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: StatusListPage(),
+      home: HomePage(),
     );
   }
 }

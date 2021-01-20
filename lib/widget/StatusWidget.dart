@@ -13,8 +13,18 @@ import 'package:path/path.dart';
 import 'package:share/share.dart';
 
 class StatusWidget extends StatelessWidget {
+  final bool enableSave;
+  final bool enableDelete;
+  final Function onDelete;
   final WhatsAppStatus status;
-  const StatusWidget({Key key, @required this.status}) : super(key: key);
+
+  const StatusWidget(
+      {Key key,
+      @required this.status,
+      this.enableSave = true,
+      this.enableDelete = false,
+      this.onDelete})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +57,7 @@ class StatusWidget extends StatelessWidget {
           ),
 
           /// Option menu
-          _getOptionMenu(context),
+          _getPrepareMenu(context),
         ],
       ),
     );
@@ -64,49 +74,61 @@ class StatusWidget extends StatelessWidget {
   }
 
   /// Return a widget that display as a pop up menu
-  Widget _getOptionMenu(context) {
-    const valueShare = 0;
-    const valueSave = 1;
-
+  Widget _getPrepareMenu(context) {
     return PopupMenuButton(
       icon: Icon(
         Icons.more_vert_rounded,
         color: AppColor.grey5,
       ),
       onSelected: (value) {
-        if (value == valueShare)
-          _onClickShareStatus();
-        else if (value == valueSave) _onClickSaveStatus(context);
+        switch (value) {
+          case AppString.optionShare:
+            _onClickShareStatus();
+            break;
+          case AppString.optionSaveStatus:
+            _onClickSaveStatus(context);
+            break;
+          case AppString.optionDelete:
+            _onClickDeleteStatus(context);
+            break;
+        }
       },
-      itemBuilder: (context) => [
-        /// Share option menu
-        PopupMenuItem(
-          value: valueShare,
-          child: Row(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 2, 8, 2),
-                child: Icon(Icons.share),
-              ),
-              Text('Share')
-            ],
-          ),
-        ),
+      itemBuilder: (context) => _getOptionMenus(),
+    );
+  }
 
-        /// Save image option menu
-        PopupMenuItem(
-          value: valueSave,
-          child: Row(
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 2, 8, 2),
-                child: Icon(Icons.save),
-              ),
-              Text('Save to gallery')
-            ],
+  List<PopupMenuItem> _getOptionMenus() {
+    List<PopupMenuItem> menus = [
+      _getOptionMenu(AppString.optionShare, Icons.share_rounded)
+    ];
+
+    if (enableSave)
+      menus.add(_getOptionMenu(
+        AppString.optionSaveStatus,
+        Icons.save,
+      ));
+
+    if (enableDelete)
+      menus.add(_getOptionMenu(
+        AppString.optionDelete,
+        Icons.delete,
+      ));
+
+    return menus;
+  }
+
+  PopupMenuItem _getOptionMenu(label, icon) {
+    return PopupMenuItem(
+      value: label,
+      child: Row(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 8, 2),
+            child: Icon(icon),
           ),
-        ),
-      ],
+          Text(label)
+        ],
+      ),
     );
   }
 
@@ -117,21 +139,33 @@ class StatusWidget extends StatelessWidget {
 
   /// Save the current image to user device
   _onClickSaveStatus(context) {
+    if (!enableSave) return;
+
     /// If the app directory is not present; create and save the image
     /// otherwise just save the image
-    if (Directory("${Directory(AppString.appDirectory).path}").existsSync()) {
+    if (Directory("${Directory(AppString.savedStatusDirectory).path}")
+        .existsSync()) {
       _saveStatus(context);
     } else {
-      Directory(AppString.appDirectory).createSync(recursive: true);
+      Directory(AppString.savedStatusDirectory).createSync(recursive: true);
       _saveStatus(context);
     }
+  }
+
+  _onClickDeleteStatus(context) async {
+    if (!enableDelete) return;
+    try {
+      File(status.contentUri).delete();
+      if (onDelete != null) onDelete();
+      MessageUtils(context).showLToast('File deleted');
+    } catch (_) {}
   }
 
   /// Save the current image to the user device
   _saveStatus(context) async {
     File fileToBeSave = File(status.contentUri);
-    final File newImage = await fileToBeSave
-        .copy('${AppString.appDirectory}/${basename(fileToBeSave.path)}');
+    final File newImage = await fileToBeSave.copy(
+        '${AppString.savedStatusDirectory}/${basename(fileToBeSave.path)}');
     MessageUtils(context).showLToast('Image saved to ${newImage.path}');
   }
 }
